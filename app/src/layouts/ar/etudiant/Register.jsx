@@ -1,0 +1,502 @@
+import {
+    User, Mail, Phone, Calendar, CreditCard, FileText, Check, Lock,
+    Sparkles, Moon, ArrowRight, Info
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import ReCAPTCHA from "react-google-recaptcha";
+
+export default function Register({ session, setNotification, setActiveTab }) {
+    const [formData, setFormData] = useState({
+        prenom: '',
+        nom: '',
+        dateNaissance: '',
+        cin: '',
+        email: '',
+        tel: '',
+        bio: '',
+        image: '',
+        password: '',
+        confirmPassword: ''
+    });
+    const [mineur, setMineur] = useState(false);
+    const [captcha, setCaptcha] = useState(null);
+
+    const handleCaptcha = (value) => {
+        setCaptcha(value);
+    };
+
+    useEffect(() => {
+        if (session) setActiveTab('dashboard');
+    });
+
+    const [errors, setErrors] = useState({});
+    const [submitted, setSubmitted] = useState(false);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+
+        if (errors[name]) {
+            setErrors(prev => ({
+                ...prev,
+                [name]: null
+            }));
+        }
+    };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData(prev => ({
+                    ...prev,
+                    image: reader.result
+                }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const validate = () => {
+        const newErrors = {};
+
+        if (!formData.prenom.trim()) newErrors.prenom = "الاسم الأول مطلوب";
+        if (!formData.nom.trim()) newErrors.nom = "الاسم الأخير مطلوب";
+        if (!formData.dateNaissance) newErrors.dateNaissance = "تاريخ الميلاد مطلوب";
+
+        if (!mineur) {
+            if (!formData.cin.trim()) {
+                newErrors.cin = "رقم البطاقة الوطنية مطلوب";
+            } else if (!/^[A-Z]{1,2}\d{5,6}$/.test(formData.cin.trim())) {
+                newErrors.cin = "تنسيق رقم البطاقة الوطنية غير صالح";
+            }
+        }
+
+        if (!formData.email.trim()) {
+            newErrors.email = "البريد الإلكتروني مطلوب";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            newErrors.email = "تنسيق البريد الإلكتروني غير صالح";
+        }
+
+        if (!formData.tel.trim()) {
+            newErrors.tel = "الهاتف مطلوب";
+        } else if (!/^0[5-7][0-9]{8}$/.test(formData.tel.trim())) {
+            newErrors.tel = "تنسيق الهاتف غير صالح";
+        }
+
+        if (!formData.password.trim()) {
+            newErrors.password = "كلمة المرور مطلوبة";
+        } else if (formData.password.length < 6) {
+            newErrors.password = "يجب أن تحتوي كلمة المرور على 6 أحرف على الأقل";
+        }
+
+        if (!formData.confirmPassword.trim()) {
+            newErrors.confirmPassword = "تأكيد كلمة المرور مطلوب";
+        } else if (formData.password !== formData.confirmPassword) {
+            newErrors.confirmPassword = "كلمات المرور غير متطابقة";
+        }
+
+        if (formData.bio.length > 500) {
+            newErrors.bio = "السيرة الذاتية لا يمكن أن تتجاوز 500 حرف";
+        }
+
+        return newErrors;
+    };
+
+    const calculateAge = (dateString) => {
+        if (!dateString) return null;
+        const birthDate = new Date(dateString);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        return age;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!captcha) {
+            setNotification((notif) => ({
+                ...notif,
+                msg: "الرجاء التحقق من CAPTCHA.",
+                type: 'info',
+                shown: true
+            }));
+            return;
+        }
+
+        const newErrors = validate();
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/_auth/userRegister', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ...formData,
+                    cin: mineur ? 'قاصر' : formData.cin,
+                    captcha: captcha
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setSubmitted(true);
+                setNotification((notif) => ({
+                    ...notif,
+                    msg: `تم إرسال التسجيل بنجاح!`,
+                    type: 'success',
+                    shown: true
+                }));
+            } else {
+                setErrors({ general: data.message.message });
+                setNotification((notif) => ({
+                    ...notif,
+                    msg: `خطأ # ${data.message.sqlMessage || data.message.code}`,
+                    type: 'error',
+                    shown: true
+                }));
+            }
+        } catch (error) {
+            setErrors({ general: 'حدث خطأ ما. الرجاء المحاولة مرة أخرى لاحقًا.' });
+            setNotification((notif) => ({
+                ...notif,
+                msg: `خطأ # ${error.message}`,
+                type: 'error',
+                shown: true
+            }));
+        }
+    };
+
+    return (
+        <div className="max-w-full relative pb-12 md:px-22" dir="rtl">
+            {/* Motif décoratif */}
+            <div className="absolute inset-0 overflow-hidden opacity-5 pointer-events-none">
+                <div className="absolute -top-24 -left-24 w-96 h-96 opacity-20">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <path fill="#B8860B" d="M50,0 L60,40 L100,40 L70,65 L80,100 L50,80 L20,100 L30,65 L0,40 L40,40 Z"></path>
+                    </svg>
+                </div>
+                <div className="absolute top-1/2 -right-24 w-64 h-64 opacity-20">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <path fill="#B8860B" d="M50,0 L60,40 L100,40 L70,65 L80,100 L50,80 L20,100 L30,65 L0,40 L40,40 Z"></path>
+                    </svg>
+                </div>
+                <div className="absolute -bottom-24 left-1/4 w-72 h-72 opacity-20">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <path fill="#B8860B" d="M50,0 L60,40 L100,40 L70,65 L80,100 L50,80 L20,100 L30,65 L0,40 L40,40 Z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            {/* Titre avec ornement */}
+            <div className="mb-12 text-center pt-8 relative">
+                <div className="inline-block">
+                    <div className="flex items-center justify-center mb-2">
+                        <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-700"></div>
+                        <Sparkles className="text-amber-800 mx-4 w-6 h-6" />
+                        <div className="h-px w-12 bg-gradient-to-r from-transparent to-amber-700"></div>
+                    </div>
+                    <h1 className="text-3xl font-bold text-gray-800">أنشئ حسابك</h1>
+                    <div className="flex items-center justify-center mt-2">
+                        <div className="h-px w-24 bg-gradient-to-l from-transparent to-amber-700"></div>
+                        <Moon className="text-amber-800 mx-4 w-4 h-4" />
+                        <div className="h-px w-24 bg-gradient-to-r from-transparent to-amber-700"></div>
+                    </div>
+                </div>
+                <p className="text-gray-600 mt-4 max-w-xl mx-auto">انضم إلى مجتمع التعلم الخاص بنا وابدأ رحلتك الروحية</p>
+            </div>
+
+            {/* Lien pour se connecter */}
+            <div className="text-center mb-6">
+                <p className="text-gray-600">
+                    هل لديك حساب بالفعل؟
+                    <span
+                        onClick={() => setActiveTab('login')}
+                        className="ml-2 text-amber-700 font-medium hover:text-amber-800 transition-colors cursor-pointer hover:underline"
+                    >
+                        تسجيل الدخول
+                    </span>
+                </p>
+            </div>
+
+            {/* Formulaire d'inscription */}
+            <div className="max-w-full mx-auto">
+                {submitted ? (
+                    <div className="bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-xl mb-10 border border-amber-100">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                                <Check className="w-8 h-8 text-green-600" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">التسجيل ناجح!</h2>
+                            <p className="text-gray-600 mb-8">شكرًا {formData.prenom} {formData.nom} على تسجيلك. لقد أرسلنا بريدًا إلكترونيًا للتأكيد إلى {formData.email}.</p>
+                            <button
+                                className="px-6 py-3 bg-gradient-to-l from-amber-600 to-amber-800 text-white rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center font-medium"
+                            >
+                                <span onClick={() => setActiveTab('dashboard')}>استكشف دوراتنا</span>
+                                <ArrowRight className="w-4 h-4 mr-2" />
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="bg-white/90 noScroll backdrop-blur-sm p-8 rounded-xl shadow-xl mb-10 border border-amber-100">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Prénom */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2 text-gray-700">الاسم الأول <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <User className="h-5 w-5 text-amber-700" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="prenom"
+                                        className={`block w-full pr-12 pl-4 py-4 border ${errors.prenom ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                        placeholder="اسمك الأول"
+                                        value={formData.prenom}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                {errors.prenom && <p className="mt-2 text-sm text-red-600">{errors.prenom}</p>}
+                            </div>
+
+                            {/* Nom */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2 text-gray-700">الاسم الأخير <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <User className="h-5 w-5 text-amber-700" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="nom"
+                                        className={`block w-full pr-12 pl-4 py-4 border ${errors.nom ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                        placeholder="اسمك الأخير"
+                                        value={formData.nom}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                {errors.nom && <p className="mt-2 text-sm text-red-600">{errors.nom}</p>}
+                            </div>
+
+                            {/* Date de naissance */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2 text-gray-700">تاريخ الميلاد <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <Calendar className="h-5 w-5 text-amber-700" />
+                                    </div>
+                                    <input
+                                        type="date"
+                                        name="dateNaissance"
+                                        className={`block w-full pr-12 pl-4 py-4 border ${errors.dateNaissance ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                        value={formData.dateNaissance}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                    {formData.dateNaissance && (
+                                        <div className="absolute inset-y-0 left-6 pl-4 flex items-center text-sm text-amber-700">
+                                            {calculateAge(formData.dateNaissance)} سنوات
+                                        </div>
+                                    )}
+                                </div>
+                                {errors.dateNaissance && <p className="mt-2 text-sm text-red-600">{errors.dateNaissance}</p>}
+                            </div>
+
+                            {/* CIN */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2 text-gray-700">رقم البطاقة الوطنية <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <CreditCard className="h-5 w-5 text-amber-700" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="cin"
+                                        className={`block w-full pr-12 pl-4 py-4 border ${errors.cin ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                        placeholder="رقم بطاقتك الوطنية"
+                                        value={mineur ? 'قاصر' : formData.cin}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                <label className='flex items-center justify-center w-fit gap-1 cursor-pointer text-sm text-gray-700'>
+                                    <input name='mineur' type="checkbox" onClick={() => setMineur(e => !e)} />
+                                    قاصر
+                                </label>
+                                {errors.cin && <p className="mt-2 text-sm text-red-600">{errors.cin}</p>}
+                            </div>
+
+                            {/* Email */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2 text-gray-700">البريد الإلكتروني <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <Mail className="h-5 w-5 text-amber-700" />
+                                    </div>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        className={`block w-full pr-12 pl-4 py-4 border ${errors.email ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                        placeholder="بريدك الإلكتروني@example.com"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email}</p>}
+                            </div>
+
+                            {/* Téléphone */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2 text-gray-700">الهاتف <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <Phone className="h-5 w-5 text-amber-700" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="tel"
+                                        className={`block w-full pr-12 pl-4 py-4 border ${errors.tel ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                        placeholder="0600000000"
+                                        value={formData.tel}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                {errors.tel && <p className="mt-2 text-sm text-red-600">{errors.tel}</p>}
+                            </div>
+
+                            {/* Mot de passe */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2 text-gray-700">كلمة المرور <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <Lock className="h-5 w-5 text-amber-700" />
+                                    </div>
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        className={`block w-full pr-12 pl-4 py-4 border ${errors.password ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                        placeholder="كلمة المرور"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password}</p>}
+                            </div>
+
+                            {/* Confirmer le mot de passe */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2 text-gray-700">تأكيد كلمة المرور <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <Lock className="h-5 w-5 text-amber-700" />
+                                    </div>
+                                    <input
+                                        type="password"
+                                        name="confirmPassword"
+                                        className={`block w-full pr-12 pl-4 py-4 border ${errors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                        placeholder="تأكيد كلمة المرور"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                {errors.confirmPassword && <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>}
+                            </div>
+
+                            {/* Image */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2 text-gray-700">الصورة</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <FileText className="h-5 w-5 text-amber-700" />
+                                    </div>
+                                    <input
+                                        type="file"
+                                        name="image"
+                                        accept="image/*"
+                                        className={`block w-full pr-12 pl-4 py-4 border ${errors.image ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                        onChange={handleImageChange}
+                                    />
+                                </div>
+                                {errors.image && <p className="mt-2 text-sm text-red-600">{errors.image}</p>}
+                            </div>
+                        </div>
+
+                        {/* Bio */}
+                        <div className="mt-6 mb-8">
+                            <label className="block text-sm font-medium mb-2 text-gray-700">السيرة الذاتية</label>
+                            <div className="relative">
+                                <div className="absolute top-4 right-4 pointer-events-none">
+                                    <FileText className="h-5 w-5 text-amber-700" />
+                                </div>
+                                <textarea
+                                    name="bio"
+                                    rows="4"
+                                    className={`block w-full pr-12 pl-4 py-4 border ${errors.bio ? 'border-red-300 bg-red-50' : 'border-amber-200'} rounded-xl bg-white/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent text-gray-700`}
+                                    placeholder="حدثنا عن نفسك بكلمات قليلة (اختياري)"
+                                    value={formData.bio}
+                                    onChange={handleChange}
+                                    maxLength="500"
+                                ></textarea>
+                                <div className="absolute bottom-2 left-3 text-xs text-gray-500">
+                                    {formData.bio.length}/500 حرف
+                                </div>
+                            </div>
+                            {errors.bio && <p className="mt-2 text-sm text-red-600">{errors.bio}</p>}
+                        </div>
+
+                        {/* Note d'information */}
+                        <div className="bg-amber-50 p-4 rounded-lg mb-8 flex">
+                            <Info className="h-5 w-5 text-amber-700 ml-3 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm text-gray-700">
+                                    من خلال التسجيل، فإنك توافق على شروط الاستخدام وسياسة الخصوصية لدينا.
+                                    سيتم معالجة بياناتك الشخصية وفقًا للقانون المعمول به.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Captcha */}
+                        <ReCAPTCHA
+                            sitekey="6LdR5lQrAAAAAPonFpFT2ahDbEo97ia30GBPqOGP"
+                            onChange={handleCaptcha}
+                        />
+
+                        {/* Bouton de soumission */}
+                        <div className="flex justify-center">
+                            <button
+                                type="submit"
+                                className="px-12 py-4 bg-gradient-to-l from-amber-600 to-amber-800 text-white rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center font-medium text-lg"
+                            >
+                                <span>التسجيل</span>
+                                <ArrowRight className="w-5 h-5 mr-2" />
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </div>
+        </div>
+    );
+}

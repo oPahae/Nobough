@@ -1,0 +1,294 @@
+@import "tailwindcss";
+
+html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body,
+.bg {
+    background-image: url('../../public/bg-ar-1.jpg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    background-attachment: fixed;
+}
+
+#thumbnail {
+    background-image: url('../../public/thumbnail.jpg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    backdrop-filter: blur(10px);
+}
+
+* {
+    scrollbar-width: none;
+}
+
+/* form {
+    max-height: 75vh;
+    overflow-y: scroll;
+} */
+
+.noScroll {
+    max-height: none;
+    overflow-y: hidden;
+}
+
+button,
+select,
+Link {
+    cursor: pointer;
+}
+
+.zakhrafa {
+    background: linear-gradient(135deg, #593a00 0%, #875e15 50%, #986301 100%);
+    background-size: cover;
+}
+
+.maxtop {
+    z-index: 2147483647 !important;
+}
+
+footer {
+    background-image: url('../../public/footer.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+}
+
+/**********************************************\ Loading /**********************************************/
+
+.logo-container {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    position: relative;
+    z-index: 10;
+    mask: url('../../public/logo-nobg.png') no-repeat center/contain;
+    -webkit-mask: url('../../public/logo-nobg.png') no-repeat center/contain;
+}
+
+.logo-base {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0.3;
+    background: url('../../public/logo-nobg.png') no-repeat center/contain;
+}
+
+.liquid-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    mask: url('../../public/logo-nobg.png') no-repeat center/contain;
+    -webkit-mask: url('../../public/logo-nobg.png') no-repeat center/contain;
+}
+
+.liquid {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: linear-gradient(180deg,
+            #4a90e2 0%,
+            #357abd 30%,
+            #2c5f8a 60%,
+            #1a4a6b 100%);
+    animation: fillLiquid 8s ease-in-out infinite;
+    transform-origin: bottom;
+}
+
+.liquid::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background: radial-gradient(ellipse 100% 20px at center,
+            rgba(74, 144, 226, 0.8) 0%,
+            transparent 70%);
+    animation: liquidWave 3s ease-in-out infinite;
+}
+
+.liquid::after {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: 10%;
+    width: 80%;
+    height: 30px;
+    background: radial-gradient(ellipse 80% 15px at center,
+            rgba(255, 255, 255, 0.3) 0%,
+            transparent 70%);
+    animation: liquidShine 2.5s ease-in-out infinite;
+}
+
+@keyframes fillLiquid {
+    0% {
+        height: 0%;
+    }
+
+    15% {
+        height: 12%;
+    }
+
+    25% {
+        height: 18%;
+    }
+
+    35% {
+        height: 35%;
+    }
+
+    45% {
+        height: 42%;
+    }
+
+    55% {
+        height: 58%;
+    }
+
+    65% {
+        height: 68%;
+    }
+
+    75% {
+        height: 82%;
+    }
+
+    85% {
+        height: 90%;
+    }
+
+    95% {
+        height: 98%;
+    }
+
+    100% {
+        height: 100%;
+    }
+}
+
+@keyframes liquidWave {
+
+    0%,
+    100% {
+        transform: scaleX(1) translateY(0px);
+        opacity: 0.6;
+    }
+
+    25% {
+        transform: scaleX(1.1) translateY(-5px) skewX(-2deg);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scaleX(0.95) translateY(-3px) skewX(1deg);
+        opacity: 0.7;
+    }
+
+    75% {
+        transform: scaleX(1.05) translateY(-7px) skewX(-1deg);
+        opacity: 0.9;
+    }
+}
+
+@keyframes liquidShine {
+
+    0%,
+    100% {
+        opacity: 0.2;
+        transform: translateX(0px) scaleY(0.8);
+    }
+
+    50% {
+        opacity: 0.4;
+        transform: translateX(5px) scaleY(1.2);
+    }
+}
+
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.particle.red {
+    background: radial-gradient(circle, #ff4757, #ff3742);
+    box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+}
+
+.particle.pistachio {
+    background: radial-gradient(circle, #7bed9f, #70a1ff);
+    box-shadow: 0 0 10px rgba(123, 237, 159, 0.5);
+}
+
+@keyframes particleFloat {
+    0% {
+        transform: translateY(0px) translateX(0px) scale(1);
+        opacity: 0.8;
+    }
+
+    25% {
+        transform: translateY(-30px) translateX(15px) scale(1.2);
+        opacity: 1;
+    }
+
+    50% {
+        transform: translateY(-60px) translateX(-10px) scale(0.8);
+        opacity: 0.9;
+    }
+
+    75% {
+        transform: translateY(-40px) translateX(20px) scale(1.1);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: translateY(-80px) translateX(0px) scale(0.5);
+        opacity: 0;
+    }
+}
+
+.loading-text {
+    position: absolute;
+    bottom: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 18px;
+    color: #4a90e2;
+    font-weight: 600;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}

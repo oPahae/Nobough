@@ -1,0 +1,98 @@
+import {
+    FileText, Download, BookOpen, User, Clock, Users, Tag,
+    ArrowRight, Sparkles, Moon, Award, Receipt, Calendar,
+    Filter, ChevronDown, GraduationCap, FileCheck
+} from 'lucide-react'
+import { useState, useEffect } from 'react'
+
+export default function Documents({ session }) {
+    const generateAttestation = async () => {
+        try {
+            const response = await fetch(`/api/_documents/attestationProf?profID=${session.id}`)
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = 'attestation-travail.pdf'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(url)
+        } catch (error) {
+            console.error('Erreur lors de la génération de l\'attestation:', error)
+        }
+    }
+
+    const generateEmploi = async () => {
+        try {
+            const response = await fetch(`/api/_documents/emploiProf?profID=${session.id}`)
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = 'emploi-du-temps.pdf'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(url)
+        } catch (error) {
+            console.error('Erreur lors de la génération de l\'emploi du temps:', error)
+        }
+    }
+
+    return (
+        <div className="w-full mx-auto md:p-6">
+            {/* En-tête */}
+            <div className="mb-8">
+                <div className="flex items-center justify-center mb-4">
+                    <div className="h-px w-16 bg-gradient-to-r from-transparent to-amber-600"></div>
+                    <FileText className="text-amber-700 mx-4 w-8 h-8" />
+                    <div className="h-px w-16 bg-gradient-to-l from-transparent to-amber-600"></div>
+                </div>
+                <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">Mes Documents</h1>
+                <p className="text-center text-gray-600">Accédez à tous vos documents académiques</p>
+            </div>
+
+            {/* Bloc 1: Documents Principaux */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <FileCheck className="w-5 h-5 mr-2 text-amber-600" />
+                    Documents Principaux
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                        onClick={generateAttestation}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-amber-300 hover:bg-amber-50 transition-all group"
+                    >
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mr-4">
+                                <Award className="w-6 h-6 text-amber-600" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-semibold text-gray-800">Attestation de travail</h3>
+                                <p className="text-sm text-gray-600">Document officiel de travail</p>
+                            </div>
+                        </div>
+                        <Download className="w-5 h-5 text-gray-400 group-hover:text-amber-600 transition-colors" />
+                    </button>
+
+                    <button
+                        onClick={generateEmploi}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-amber-300 hover:bg-amber-50 transition-all group"
+                    >
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mr-4">
+                                <Calendar className="w-6 h-6 text-amber-600" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-semibold text-gray-800">Emploi du temps</h3>
+                                <p className="text-sm text-gray-600">Planning des cours actuels</p>
+                            </div>
+                        </div>
+                        <Download className="w-5 h-5 text-gray-400 group-hover:text-amber-600 transition-colors" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
